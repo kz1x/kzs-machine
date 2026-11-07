@@ -1,21 +1,38 @@
-$ErrorActionPreference = "Stop"
-$pageFile = "C:\amazon-omniscient-pages\index.html"
-if (-not (Test-Path $pageFile)) { throw "Missing $pageFile. Run the security setup script first." }
-
-$html = [System.IO.File]::ReadAllText($pageFile)
-if ($html -match "AKfyc|docs\.google\.com|sheet_config|5a596839") { throw "The page contains private data. Do not upload it." }
-
-Set-Clipboard -Value $html
-Write-Host "Copied index.html to the clipboard ($($html.Length) characters)." -ForegroundColor Green
-
-Start-Process "https://github.com/kz1x/kzs-machine/edit/main/index.html"
-Start-Sleep -Seconds 2
-Start-Process "https://github.com/kz1x/kzs-machine/settings/pages"
-
-Write-Host "`nIn the GitHub editor that just opened:" -ForegroundColor Cyan
-Write-Host "1. Click inside the empty box, press Ctrl+A, then Ctrl+V." -ForegroundColor Yellow
-Write-Host "2. Click 'Commit changes...', then 'Commit changes' again." -ForegroundColor Yellow
-Write-Host "`nIn the Pages settings that just opened:" -ForegroundColor Cyan
-Write-Host "3. Under Build and deployment, set Source to 'Deploy from a branch'." -ForegroundColor Yellow
-Write-Host "4. Branch: main, folder: / (root), then click Save." -ForegroundColor Yellow
-Write-Host "5. Wait about a minute, then open https://kz1x.github.io/kzs-machine/" -ForegroundColor Yellow
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>kz's special machine</title>
+<style>
+body{background:#030712;color:#e2e8f0;font-family:Segoe UI,Arial,sans-serif;display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0}
+.card{background:#0b1120;border:1px solid #1e293b;border-radius:12px;padding:28px;width:min(460px,92vw)}
+input{width:100%;box-sizing:border-box;padding:10px;background:#0f172a;border:1px solid #334155;color:#fff;border-radius:8px;margin:10px 0}
+button{background:#2563eb;color:#fff;border:0;border-radius:8px;padding:10px 16px;font-weight:700;cursor:pointer}
+p{color:#94a3b8;font-size:14px}
+.err{color:#fca5a5;font-size:13px;min-height:18px}
+</style>
+</head>
+<body>
+<div class="card">
+<h2>kz's special machine</h2>
+<p>Paste the link shown in your PC's tunnel window, then sign in with your password.</p>
+<input id="u" placeholder="https://xxxx.trycloudflare.com">
+<button onclick="go()">Open</button>
+<div class="err" id="m"></div>
+</div>
+<script>
+var box = document.getElementById("u");
+box.value = localStorage.getItem("kz_tunnel") || "";
+function go() {
+  var v = box.value.trim();
+  if (!/^https:\/\/[a-z0-9-]+(\.[a-z0-9-]+)+/i.test(v)) {
+    document.getElementById("m").textContent = "Paste the https:// link from the tunnel window.";
+    return;
+  }
+  localStorage.setItem("kz_tunnel", v);
+  window.location.href = v.replace(/\/+$/, "") + "/";
+}
+</script>
+</body>
+</html>
