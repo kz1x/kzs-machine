@@ -6,33 +6,68 @@
 <title>kz's special machine</title>
 <style>
 body{background:#030712;color:#e2e8f0;font-family:Segoe UI,Arial,sans-serif;display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0}
-.card{background:#0b1120;border:1px solid #1e293b;border-radius:12px;padding:28px;width:min(460px,92vw)}
-input{width:100%;box-sizing:border-box;padding:10px;background:#0f172a;border:1px solid #334155;color:#fff;border-radius:8px;margin:10px 0}
-button{background:#2563eb;color:#fff;border:0;border-radius:8px;padding:10px 16px;font-weight:700;cursor:pointer}
-p{color:#94a3b8;font-size:14px}
-.err{color:#fca5a5;font-size:13px;min-height:18px}
+.card{background:#0b1120;border:1px solid #1e293b;border-radius:12px;padding:28px;width:min(380px,92vw);text-align:center}
+p{color:#94a3b8;font-size:14px;margin:6px 0 16px}
+input{width:100%;box-sizing:border-box;padding:11px;background:#0f172a;border:1px solid #334155;color:#fff;border-radius:8px;font-size:15px}
+button{width:100%;margin-top:12px;background:#2563eb;color:#fff;border:0;border-radius:8px;padding:11px;font-weight:700;font-size:15px;cursor:pointer}
+button:disabled{opacity:.6;cursor:wait}
+.err{color:#fca5a5;font-size:13px;min-height:18px;margin-top:10px}
 </style>
 </head>
 <body>
 <div class="card">
 <h2>kz's special machine</h2>
-<p>Paste the link shown in your PC's tunnel window, then sign in with your password.</p>
-<input id="u" placeholder="https://xxxx.trycloudflare.com">
-<button onclick="go()">Open</button>
-<div class="err" id="m"></div>
+<p>Enter your password to continue.</p>
+<input id="pw" type="password" placeholder="Password" autofocus>
+<button id="go">Unlock</button>
+<div class="err" id="err"></div>
 </div>
 <script>
-var box = document.getElementById("u");
-box.value = localStorage.getItem("kz_tunnel") || "";
-function go() {
-  var v = box.value.trim();
-  if (!/^https:\/\/[a-z0-9-]+(\.[a-z0-9-]+)+/i.test(v)) {
-    document.getElementById("m").textContent = "Paste the https:// link from the tunnel window.";
-    return;
-  }
-  localStorage.setItem("kz_tunnel", v);
-  window.location.href = v.replace(/\/+$/, "") + "/";
+var SALT = "GqSwbN/urHz9IprEFS3y7g==";
+var IV = "liSV/rIVetG7kpX5iN8QyA==";
+var CT = "Upe9BgVd+ShB9H3WAQAUZdtxc6T/fmO8rv72RpNzkVGamnP1/5AByMoIUo0gfijY";
+
+function bytes(b64) {
+  var s = atob(b64), out = new Uint8Array(s.length);
+  for (var i = 0; i < s.length; i++) out[i] = s.charCodeAt(i);
+  return out;
 }
+
+async function unlock(pw) {
+  var enc = new TextEncoder();
+  var base = await crypto.subtle.importKey("raw", enc.encode(pw), "PBKDF2", false, ["deriveKey"]);
+  var key = await crypto.subtle.deriveKey(
+    { name: "PBKDF2", salt: bytes(SALT), iterations: 200000, hash: "SHA-256" },
+    base,
+    { name: "AES-CBC", length: 256 },
+    false,
+    ["decrypt"]
+  );
+  var plain = await crypto.subtle.decrypt({ name: "AES-CBC", iv: bytes(IV) }, key, bytes(CT));
+  return new TextDecoder().decode(plain);
+}
+
+var btn = document.getElementById("go");
+var input = document.getElementById("pw");
+var err = document.getElementById("err");
+
+async function go() {
+  var pw = input.value;
+  if (!pw) { err.textContent = "Enter your password."; return; }
+  btn.disabled = true;
+  err.textContent = "Checking...";
+  try {
+    var url = await unlock(pw);
+    window.location.replace(url);
+  } catch (e) {
+    err.textContent = "Wrong password.";
+    input.select();
+    btn.disabled = false;
+  }
+}
+
+btn.addEventListener("click", go);
+input.addEventListener("keydown", function (e) { if (e.key === "Enter") go(); });
 </script>
 </body>
 </html>
